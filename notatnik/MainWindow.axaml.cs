@@ -189,9 +189,6 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Obsługa przycisku zapisu notatki.
-    /// </summary>
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         var title = TitleTextBox.Text?.Trim() ?? string.Empty;
@@ -204,42 +201,26 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_selectedNote != null && _selectedNote.Title == title)
+        // Utworzenie notatki i umieszczenie jej na samej górze pliku z zachowaniem wcześniejszych
+        var newNote = new Note
         {
-            // Aktualizacja zaznaczonej notatki
-            _selectedNote.Content = content;
-            _selectedNote.CreatedAt = DateTime.Now;
+            Id = Guid.NewGuid(),
+            Title = title,
+            Content = content,
+            CreatedAt = DateTime.Now
+        };
 
-            _allNotes.Remove(_selectedNote);
-            _allNotes.Insert(0, _selectedNote);
+        _allNotes.Insert(0, newNote);
+        SaveNotesToFile();
 
-            if (SaveNotesToFile())
-            {
-                SetStatus("Zaktualizowano notatkę!", Brushes.ForestGreen);
-            }
-        }
-        else
-        {
-            // Utworzenie nowej notatki z zachowaniem wszystkich wcześniejszych
-            var newNote = new Note
-            {
-                Id = Guid.NewGuid(),
-                Title = title,
-                Content = content,
-                CreatedAt = DateTime.Now
-            };
-
-            _allNotes.Insert(0, newNote);
-            _selectedNote = newNote;
-
-            if (SaveNotesToFile())
-            {
-                SetStatus("Zapisano notatkę!", Brushes.ForestGreen);
-            }
-        }
+        // Po kliknięciu „Zapisz” wyczyść pola formularza i zaktualizuj listę notatek
+        TitleTextBox.Text = string.Empty;
+        ContentTextBox.Text = string.Empty;
+        _selectedNote = null;
+        NotesListBox.SelectedItem = null;
 
         RefreshNotesList();
-        NotesListBox.SelectedItem = _selectedNote;
+        SetStatus("Zapisano notatkę!", Brushes.ForestGreen);
     }
 
     /// <summary>
