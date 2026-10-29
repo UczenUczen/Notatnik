@@ -103,7 +103,7 @@
                         Background="{DynamicResource LayerOnAcrylicAccentFillColorDefault}"
                         CornerRadius="4">
                     <TextBlock x:Name="StorageInfoTextBlock"
-                               Text="Plik: notatki.json"
+                               Text="Plik: notatki.md"
                                FontSize="11"
                                Opacity="0.7"
                                TextTrimming="CharacterEllipsis" />

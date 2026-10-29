@@ -11,8 +11,7 @@ public class Note
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? ModifiedAt { get; set; }
 
-    [JsonIgnore]
-    public string FormattedDate => (ModifiedAt ?? CreatedAt).ToString("dd.MM.yyyy HH:mm");
+    public string FormattedDate => CreatedAt.ToString("yyyy-MM-dd HH:mm");
 
     [JsonIgnore]
     public string PreviewSnippet

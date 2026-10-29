@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 namespace notatnik;
 
@@ -18,10 +19,12 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<Note> _displayedNotes = new();
     private Note? _selectedNote;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true
-    };
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
+    // Wzorzec nagłówka wpisu w Markdown: ## RRRR-MM-DD GG:MM — Tytuł notatki
+    private static readonly Regex HeaderRegex = new(
+        @"^##\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+[—–-]\s*(.*)$",
+        RegexOptions.Compiled);
 
     public MainWindow()
     {
@@ -37,20 +40,32 @@ public partial class MainWindow : Window
         LoadNotesFromFile();
     }
 
+    /// <summary>
+    /// Ustala ścieżkę do pliku notatki.md w folderze projektu.
+    /// </summary>
     private static string ResolveStoragePath()
     {
         var currentDir = Directory.GetCurrentDirectory();
+
+        // Jeśli uruchomiono bezpośrednio w folderze projektu notatnik
         var projectFile = Path.Combine(currentDir, "notatnik.csproj");
-        if (File.Exists(projectFile) || File.Exists(Path.Combine(currentDir, "notatki.json")))
+        if (File.Exists(projectFile) || File.Exists(Path.Combine(currentDir, "notatki.md")))
         {
-            return Path.Combine(currentDir, "notatki.json");
+            return Path.Combine(currentDir, "notatki.md");
         }
 
-        return Path.Combine(AppContext.BaseDirectory, "notatki.json");
+        // Jeśli uruchomiono z katalogu nadrzędnego repozytorium
+        var subDirProject = Path.Combine(currentDir, "notatnik", "notatnik.csproj");
+        if (File.Exists(subDirProject))
+        {
+            return Path.Combine(currentDir, "notatnik", "notatki.md");
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "notatki.md");
     }
 
     /// <summary>
-    /// Wczytuje notatki z pliku JSON.
+    /// Wczytuje notatki z pliku Markdown.
     /// </summary>
     private void LoadNotesFromFile()
     {
@@ -58,14 +73,11 @@ public partial class MainWindow : Window
         {
             if (File.Exists(_filePath))
             {
-                var json = File.ReadAllText(_filePath);
-                var loadedNotes = JsonSerializer.Deserialize<List<Note>>(json, JsonOptions);
+                var markdown = File.ReadAllText(_filePath, Encoding.UTF8);
+                var loadedNotes = ParseMarkdown(markdown);
 
                 _allNotes.Clear();
-                if (loadedNotes != null)
-                {
-                    _allNotes.AddRange(loadedNotes.OrderByDescending(n => n.ModifiedAt ?? n.CreatedAt));
-                }
+                _allNotes.AddRange(loadedNotes.OrderByDescending(n => n.CreatedAt));
             }
         }
         catch (Exception ex)
@@ -77,7 +89,69 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Zapisuje aktualną listę notatek do pliku JSON.
+    /// Parsuje zawartość pliku Markdown do obiektów Note.
+    /// </summary>
+    private static List<Note> ParseMarkdown(string markdown)
+    {
+        var notes = new List<Note>();
+        if (string.IsNullOrWhiteSpace(markdown)) return notes;
+
+        var lines = markdown.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        Note? currentNote = null;
+        var contentLines = new List<string>();
+
+        void FlushCurrentNote()
+        {
+            if (currentNote != null)
+            {
+                while (contentLines.Count > 0 && string.IsNullOrWhiteSpace(contentLines[0]))
+                    contentLines.RemoveAt(0);
+                while (contentLines.Count > 0 && string.IsNullOrWhiteSpace(contentLines[^1]))
+                    contentLines.RemoveAt(contentLines.Count - 1);
+
+                currentNote.Content = string.Join(Environment.NewLine, contentLines);
+                notes.Add(currentNote);
+                currentNote = null;
+                contentLines.Clear();
+            }
+        }
+
+        foreach (var line in lines)
+        {
+            var match = HeaderRegex.Match(line);
+            if (match.Success)
+            {
+                FlushCurrentNote();
+
+                var dateStr = match.Groups[1].Value.Trim();
+                var titleStr = match.Groups[2].Value.Trim();
+
+                if (!DateTime.TryParseExact(dateStr, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+                {
+                    parsedDate = DateTime.Now;
+                }
+
+                currentNote = new Note
+                {
+                    Id = Guid.NewGuid(),
+                    Title = titleStr,
+                    CreatedAt = parsedDate
+                };
+            }
+            else if (currentNote != null)
+            {
+                contentLines.Add(line);
+            }
+        }
+
+        FlushCurrentNote();
+        return notes;
+    }
+
+    /// <summary>
+    /// Zapisuje aktualną listę notatek do pliku notatki.md w formacie Markdown.
+    /// Najnowsza notatka znajduje się na górze pliku.
+    /// Między wpisami znajduje się jedna pusta linia.
     /// </summary>
     private bool SaveNotesToFile()
     {
@@ -89,8 +163,27 @@ public partial class MainWindow : Window
                 Directory.CreateDirectory(dir);
             }
 
-            var json = JsonSerializer.Serialize(_allNotes, JsonOptions);
-            File.WriteAllText(_filePath, json);
+            var sb = new StringBuilder();
+            var sortedNotes = _allNotes.OrderByDescending(n => n.CreatedAt).ToList();
+
+            for (int i = 0; i < sortedNotes.Count; i++)
+            {
+                var note = sortedNotes[i];
+                sb.AppendLine($"## {note.CreatedAt:yyyy-MM-dd HH:mm} — {note.Title}");
+
+                if (!string.IsNullOrWhiteSpace(note.Content))
+                {
+                    sb.AppendLine(note.Content.TrimEnd());
+                }
+
+                // Pusta linia między wpisami
+                if (i < sortedNotes.Count - 1)
+                {
+                    sb.AppendLine();
+                }
+            }
+
+            File.WriteAllText(_filePath, sb.ToString(), Utf8NoBom);
             return true;
         }
         catch (Exception ex)
@@ -121,15 +214,15 @@ public partial class MainWindow : Window
             // Aktualizacja istniejącej notatki
             _selectedNote.Title = title;
             _selectedNote.Content = content;
-            _selectedNote.ModifiedAt = DateTime.Now;
+            _selectedNote.CreatedAt = DateTime.Now;
 
-            // Sortowanie notatek wg najnowszej edycji
+            // Sortowanie: najnowsza na górze
             _allNotes.Remove(_selectedNote);
             _allNotes.Insert(0, _selectedNote);
 
             if (SaveNotesToFile())
             {
-                SetStatus("✅ Zaktualizowano notatkę i zapisano do pliku!", Brushes.ForestGreen);
+                SetStatus("✅ Zaktualizowano notatkę i zapisano do pliku notatki.md!", Brushes.ForestGreen);
             }
         }
         else
@@ -148,7 +241,7 @@ public partial class MainWindow : Window
 
             if (SaveNotesToFile())
             {
-                SetStatus("✅ Notatka zapisana do pliku!", Brushes.ForestGreen);
+                SetStatus("✅ Notatka zapisana do pliku notatki.md!", Brushes.ForestGreen);
             }
 
             EditorHeaderTextBlock.Text = "Edycja notatki";
