@@ -21,7 +21,7 @@ public partial class MainWindow : Window
 
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
-    // Wzorzec nagłówka wpisu w Markdown: ## RRRR-MM-DD GG:MM — Tytuł notatki
+    // Wzorzec nagłówka wpisu w Markdown.
     private static readonly Regex HeaderRegex = new(
         @"^##\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+[—–-]\s*(.*)$",
         RegexOptions.Compiled);
@@ -37,7 +37,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Ustala ścieżkę do pliku notatki.md w folderze projektu.
+    /// Ustala ścieżkę do pliku notatki.md.
     /// </summary>
     private static string ResolveStoragePath()
     {
@@ -71,12 +71,15 @@ public partial class MainWindow : Window
                 var loadedNotes = ParseMarkdown(markdown);
 
                 _allNotes.Clear();
-                _allNotes.AddRange(loadedNotes.OrderByDescending(n => n.CreatedAt));
+                _allNotes.AddRange(
+                    loadedNotes.OrderByDescending(n => n.CreatedAt));
             }
         }
         catch (Exception ex)
         {
-            SetStatus($"Błąd podczas wczytywania: {ex.Message}", Brushes.Red);
+            SetStatus(
+                $"Błąd podczas wczytywania: {ex.Message}",
+                Brushes.Red);
         }
 
         RefreshNotesList();
@@ -88,9 +91,15 @@ public partial class MainWindow : Window
     private static List<Note> ParseMarkdown(string markdown)
     {
         var notes = new List<Note>();
-        if (string.IsNullOrWhiteSpace(markdown)) return notes;
 
-        var lines = markdown.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        if (string.IsNullOrWhiteSpace(markdown))
+            return notes;
+
+        var lines = markdown
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n')
+            .Split('\n');
+
         Note? currentNote = null;
         var contentLines = new List<string>();
 
@@ -98,12 +107,21 @@ public partial class MainWindow : Window
         {
             if (currentNote != null)
             {
-                while (contentLines.Count > 0 && string.IsNullOrWhiteSpace(contentLines[0]))
+                while (contentLines.Count > 0 &&
+                       string.IsNullOrWhiteSpace(contentLines[0]))
+                {
                     contentLines.RemoveAt(0);
-                while (contentLines.Count > 0 && string.IsNullOrWhiteSpace(contentLines[^1]))
-                    contentLines.RemoveAt(contentLines.Count - 1);
+                }
 
-                currentNote.Content = string.Join(Environment.NewLine, contentLines);
+                while (contentLines.Count > 0 &&
+                       string.IsNullOrWhiteSpace(contentLines[^1]))
+                {
+                    contentLines.RemoveAt(contentLines.Count - 1);
+                }
+
+                currentNote.Content =
+                    string.Join(Environment.NewLine, contentLines);
+
                 notes.Add(currentNote);
                 currentNote = null;
                 contentLines.Clear();
@@ -113,6 +131,7 @@ public partial class MainWindow : Window
         foreach (var line in lines)
         {
             var match = HeaderRegex.Match(line);
+
             if (match.Success)
             {
                 FlushCurrentNote();
@@ -120,7 +139,12 @@ public partial class MainWindow : Window
                 var dateStr = match.Groups[1].Value.Trim();
                 var titleStr = match.Groups[2].Value.Trim();
 
-                if (!DateTime.TryParseExact(dateStr, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+                if (!DateTime.TryParseExact(
+                        dateStr,
+                        "yyyy-MM-dd HH:mm",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None,
+                        out var parsedDate))
                 {
                     parsedDate = DateTime.Now;
                 }
@@ -143,28 +167,33 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Zapisuje wszystkie notatki do jednego pliku notatki.md w folderze projektu.
-    /// Najnowsza notatka znajduje się na górze pliku.
-    /// Zachowuje dokładny format nagłówka oraz pustą linię między wpisami.
-    /// Polskie znaki są zapisywane w kodowaniu UTF-8.
+    /// Zapisuje wszystkie notatki do jednego pliku Markdown.
+    /// Najnowsza notatka znajduje się na górze.
+    /// Kodowanie: UTF-8 bez BOM.
     /// </summary>
     private bool SaveNotesToFile()
     {
         try
         {
             var dir = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+
+            if (!string.IsNullOrEmpty(dir) &&
+                !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
             }
 
             var sb = new StringBuilder();
-            var sortedNotes = _allNotes.OrderByDescending(n => n.CreatedAt).ToList();
+            var sortedNotes = _allNotes
+                .OrderByDescending(n => n.CreatedAt)
+                .ToList();
 
             for (int i = 0; i < sortedNotes.Count; i++)
             {
                 var note = sortedNotes[i];
-                sb.AppendLine($"## {note.CreatedAt:yyyy-MM-dd HH:mm} — {note.Title}");
+
+                sb.AppendLine(
+                    $"## {note.CreatedAt:yyyy-MM-dd HH:mm} — {note.Title}");
                 sb.AppendLine();
 
                 if (!string.IsNullOrWhiteSpace(note.Content))
@@ -172,19 +201,26 @@ public partial class MainWindow : Window
                     sb.AppendLine(note.Content.TrimEnd());
                 }
 
-                // Jedna pusta linia między wpisami
+                // Jedna pusta linia między wpisami.
                 if (i < sortedNotes.Count - 1)
                 {
                     sb.AppendLine();
                 }
             }
 
-            File.WriteAllText(_filePath, sb.ToString(), Utf8NoBom);
+            File.WriteAllText(
+                _filePath,
+                sb.ToString(),
+                Utf8NoBom);
+
             return true;
         }
         catch (Exception ex)
         {
-            SetStatus($"Błąd zapisu: {ex.Message}", Brushes.Red);
+            SetStatus(
+                $"Błąd zapisu: {ex.Message}",
+                Brushes.Red);
+
             return false;
         }
     }
@@ -196,12 +232,14 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(title))
         {
-            SetStatus("Wpisz tytuł notatki!", Brushes.OrangeRed);
+            SetStatus(
+                "Wpisz tytuł notatki!",
+                Brushes.OrangeRed);
+
             TitleTextBox.Focus();
             return;
         }
 
-        // Utworzenie notatki i umieszczenie jej na samej górze pliku z zachowaniem wcześniejszych
         var newNote = new Note
         {
             Id = Guid.NewGuid(),
@@ -210,29 +248,44 @@ public partial class MainWindow : Window
             CreatedAt = DateTime.Now
         };
 
+        // Dodaj notatkę tymczasowo do listy.
         _allNotes.Insert(0, newNote);
-        SaveNotesToFile();
 
-        // Po kliknięciu „Zapisz” wyczyść pola formularza i zaktualizuj listę notatek
+        // Jeśli zapis się nie uda, wycofaj zmianę w pamięci.
+        // Nie czyść formularza — użytkownik zachowa swoją treść.
+        if (!SaveNotesToFile())
+        {
+            _allNotes.Remove(newNote);
+            RefreshNotesList();
+            return;
+        }
+
+        // Formularz czyścimy dopiero po udanym zapisie.
         TitleTextBox.Text = string.Empty;
         ContentTextBox.Text = string.Empty;
         _selectedNote = null;
         NotesListBox.SelectedItem = null;
 
         RefreshNotesList();
-        SetStatus("Zapisano notatkę!", Brushes.ForestGreen);
+
+        SetStatus(
+            "Zapisano notatkę!",
+            Brushes.ForestGreen);
     }
 
     /// <summary>
     /// Wybór notatki z listy wczytuje jej dane do pól edycji.
     /// </summary>
-    private void OnNotesListSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void OnNotesListSelectionChanged(
+        object? sender,
+        SelectionChangedEventArgs e)
     {
         if (NotesListBox.SelectedItem is Note note)
         {
             _selectedNote = note;
             TitleTextBox.Text = note.Title;
             ContentTextBox.Text = note.Content;
+
             SetStatus(string.Empty, Brushes.Transparent);
         }
     }
@@ -240,6 +293,7 @@ public partial class MainWindow : Window
     private void RefreshNotesList()
     {
         _displayedNotes.Clear();
+
         foreach (var note in _allNotes)
         {
             _displayedNotes.Add(note);
