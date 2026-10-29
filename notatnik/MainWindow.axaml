@@ -3,60 +3,29 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:notatnik"
-        mc:Ignorable="d" d:DesignWidth="920" d:DesignHeight="600"
-        Width="920" Height="620"
-        MinWidth="680" MinHeight="440"
+        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="550"
+        Width="850" Height="550"
+        MinWidth="600" MinHeight="400"
         WindowStartupLocation="CenterScreen"
         x:Class="notatnik.MainWindow"
         Title="Notatnik">
 
-    <Grid ColumnDefinitions="320, 8, *" Margin="16">
-        <!-- Lewy panel: Lista notatek -->
+    <Grid ColumnDefinitions="300, 10, *" Margin="16">
+        <!-- Lista zapisanych notatek -->
         <Border Grid.Column="0"
                 BorderBrush="{DynamicResource CardStrokeColorDefault}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="12"
                 Background="{DynamicResource CardBackgroundFillColorDefault}">
-            <Grid RowDefinitions="Auto, Auto, Auto, *, Auto">
-                <!-- Nagłówek listy -->
-                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,10">
-                    <TextBlock Text="Zapisane notatki"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                    <Border Grid.Column="1"
-                            Background="{DynamicResource AccentButtonBackground}"
-                            CornerRadius="10"
-                            Padding="8,2"
-                            VerticalAlignment="Center">
-                        <TextBlock x:Name="NotesCountTextBlock"
-                                   Text="0"
-                                   FontSize="12"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentButtonForeground}" />
-                    </Border>
-                </Grid>
+            <Grid RowDefinitions="Auto, *">
+                <TextBlock Grid.Row="0"
+                           Text="Zapisane notatki"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,10" />
 
-                <!-- Przycisk nowej notatki -->
-                <Button Grid.Row="1"
-                        x:Name="NewNoteBtn"
-                        Content="➕ Nowa notatka"
-                        Classes="accent"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"
-                        Click="OnNewNoteClick"
-                        Margin="0,0,0,10" />
-
-                <!-- Pole wyszukiwania -->
-                <TextBox Grid.Row="2"
-                         x:Name="SearchTextBox"
-                         PlaceholderText="🔍 Szukaj notatki..."
-                         TextChanged="OnSearchTextChanged"
-                         Margin="0,0,0,10" />
-
-                <!-- Lista notatek -->
-                <ListBox Grid.Row="3"
+                <ListBox Grid.Row="1"
                          x:Name="NotesListBox"
                          SelectionMode="Single"
                          SelectionChanged="OnNotesListSelectionChanged"
@@ -83,78 +52,43 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-
-                <!-- Komunikat gdy brak notatek -->
-                <TextBlock Grid.Row="3"
-                           x:Name="EmptyNotesPlaceholder"
-                           Text="Brak zapisanych notatek.&#x0a;Wypełnij formularz po prawej i zapisz swoją pierwszą notatkę!"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           Opacity="0.6"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           Margin="12"
-                           IsHitTestVisible="False" />
-
-                <!-- Informacja o pliku w stopce listy -->
-                <Border Grid.Row="4"
-                        Margin="0,8,0,0"
-                        Padding="6"
-                        Background="{DynamicResource LayerOnAcrylicAccentFillColorDefault}"
-                        CornerRadius="4">
-                    <TextBlock x:Name="StorageInfoTextBlock"
-                               Text="Plik: notatki.md"
-                               FontSize="11"
-                               Opacity="0.7"
-                               TextTrimming="CharacterEllipsis" />
-                </Border>
             </Grid>
         </Border>
 
-        <!-- Rozdzielacz paneli -->
+        <!-- Rozdzielacz -->
         <GridSplitter Grid.Column="1"
                       Width="4"
                       Background="Transparent"
                       ResizeDirection="Columns" />
 
-        <!-- Prawy panel: Edytor notatki -->
+        <!-- Formularz notatki -->
         <Border Grid.Column="2"
                 BorderBrush="{DynamicResource CardStrokeColorDefault}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="16"
                 Background="{DynamicResource CardBackgroundFillColorDefault}">
-            <Grid RowDefinitions="Auto, Auto, Auto, Auto, *, Auto">
-                <!-- Tytuł sekcji edytora -->
+            <Grid RowDefinitions="Auto, Auto, Auto, *, Auto">
+                <!-- Pole na tytuł -->
                 <TextBlock Grid.Row="0"
-                           x:Name="EditorHeaderTextBlock"
-                           Text="Nowa notatka"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,12" />
-
-                <!-- Etykieta i pole na tytuł -->
-                <TextBlock Grid.Row="1"
                            Text="Tytuł:"
                            FontWeight="Medium"
                            FontSize="13"
                            Margin="0,0,0,4" />
-                <TextBox Grid.Row="2"
+                <TextBox Grid.Row="1"
                          x:Name="TitleTextBox"
                          PlaceholderText="Wpisz tytuł notatki..."
                          FontSize="14"
                          Padding="10,8"
                          Margin="0,0,0,12" />
 
-                <!-- Etykieta na treść -->
-                <TextBlock Grid.Row="3"
+                <!-- Pole na treść -->
+                <TextBlock Grid.Row="2"
                            Text="Treść:"
                            FontWeight="Medium"
                            FontSize="13"
                            Margin="0,0,0,4" />
-
-                <!-- Pole na treść -->
-                <TextBox Grid.Row="4"
+                <TextBox Grid.Row="3"
                          x:Name="ContentTextBox"
                          PlaceholderText="Wpisz treść notatki..."
                          AcceptsReturn="True"
@@ -165,45 +99,20 @@
                          Padding="10"
                          Margin="0,0,0,12" />
 
-                <!-- Pasek akcji -->
-                <Grid Grid.Row="5" ColumnDefinitions="Auto, Auto, Auto, *">
-                    <!-- Przycisk zapisu -->
-                    <Button Grid.Column="0"
-                            x:Name="SaveButton"
-                            Content="💾 Zapisz notatkę"
+                <!-- Pasek zapisu -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10">
+                    <Button x:Name="SaveButton"
+                            Content="Zapisz"
                             Classes="accent"
-                            Padding="16,8"
+                            Padding="20,8"
                             FontWeight="SemiBold"
-                            Click="OnSaveClick"
-                            HotKey="Ctrl+S"
-                            Margin="0,0,8,0" />
+                            Click="OnSaveClick" />
 
-                    <!-- Przycisk wyczyszczenia -->
-                    <Button Grid.Column="1"
-                            x:Name="ClearButton"
-                            Content="Wyczyść formularz"
-                            Padding="12,8"
-                            Click="OnClearClick"
-                            Margin="0,0,8,0" />
-
-                    <!-- Przycisk usunięcia -->
-                    <Button Grid.Column="2"
-                            x:Name="DeleteButton"
-                            Content="🗑️ Usuń"
-                            Padding="12,8"
-                            Click="OnDeleteClick"
-                            IsVisible="False"
-                            Margin="0,0,8,0" />
-
-                    <!-- Komunikat o statusie zapisu / błędu -->
-                    <TextBlock Grid.Column="3"
-                               x:Name="StatusTextBlock"
+                    <TextBlock x:Name="StatusTextBlock"
                                VerticalAlignment="Center"
-                               Margin="8,0,0,0"
                                FontSize="13"
-                               FontWeight="Medium"
-                               TextTrimming="CharacterEllipsis" />
-                </Grid>
+                               FontWeight="Medium" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

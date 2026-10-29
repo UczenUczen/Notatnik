@@ -31,11 +31,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _filePath = ResolveStoragePath();
-
         NotesListBox.ItemsSource = _displayedNotes;
-
-        StorageInfoTextBlock.Text = $"Plik: {Path.GetFileName(_filePath)}";
-        ToolTip.SetTip(StorageInfoTextBlock, $"Pełna ścieżka: {_filePath}");
 
         LoadNotesFromFile();
     }
@@ -47,14 +43,12 @@ public partial class MainWindow : Window
     {
         var currentDir = Directory.GetCurrentDirectory();
 
-        // Jeśli uruchomiono bezpośrednio w folderze projektu notatnik
         var projectFile = Path.Combine(currentDir, "notatnik.csproj");
         if (File.Exists(projectFile) || File.Exists(Path.Combine(currentDir, "notatki.md")))
         {
             return Path.Combine(currentDir, "notatki.md");
         }
 
-        // Jeśli uruchomiono z katalogu nadrzędnego repozytorium
         var subDirProject = Path.Combine(currentDir, "notatnik", "notatnik.csproj");
         if (File.Exists(subDirProject))
         {
@@ -82,14 +76,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            SetStatus($"❌ Błąd podczas wczytywania notatek: {ex.Message}", Brushes.Red);
+            SetStatus($"Błąd podczas wczytywania: {ex.Message}", Brushes.Red);
         }
 
-        ApplyFilter();
+        RefreshNotesList();
     }
 
     /// <summary>
-    /// Parsuje zawartość pliku Markdown do obiektów Note.
+    /// Parsuje treść pliku Markdown na listę notatek.
     /// </summary>
     private static List<Note> ParseMarkdown(string markdown)
     {
@@ -149,9 +143,10 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Zapisuje aktualną listę notatek do pliku notatki.md w formacie Markdown.
+    /// Zapisuje wszystkie notatki do jednego pliku notatki.md w folderze projektu.
     /// Najnowsza notatka znajduje się na górze pliku.
-    /// Między wpisami znajduje się jedna pusta linia.
+    /// Zachowuje dokładny format nagłówka oraz pustą linię między wpisami.
+    /// Polskie znaki są zapisywane w kodowaniu UTF-8.
     /// </summary>
     private bool SaveNotesToFile()
     {
@@ -170,13 +165,14 @@ public partial class MainWindow : Window
             {
                 var note = sortedNotes[i];
                 sb.AppendLine($"## {note.CreatedAt:yyyy-MM-dd HH:mm} — {note.Title}");
+                sb.AppendLine();
 
                 if (!string.IsNullOrWhiteSpace(note.Content))
                 {
                     sb.AppendLine(note.Content.TrimEnd());
                 }
 
-                // Pusta linia między wpisami
+                // Jedna pusta linia między wpisami
                 if (i < sortedNotes.Count - 1)
                 {
                     sb.AppendLine();
@@ -188,7 +184,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            SetStatus($"❌ Błąd zapisu do pliku: {ex.Message}", Brushes.Red);
+            SetStatus($"Błąd zapisu: {ex.Message}", Brushes.Red);
             return false;
         }
     }
@@ -201,33 +197,30 @@ public partial class MainWindow : Window
         var title = TitleTextBox.Text?.Trim() ?? string.Empty;
         var content = ContentTextBox.Text?.Trim() ?? string.Empty;
 
-        // Walidacja - tytuł jest wymagany
         if (string.IsNullOrWhiteSpace(title))
         {
-            SetStatus("⚠️ Wpisz tytuł notatki przed zapisaniem!", Brushes.OrangeRed);
+            SetStatus("Wpisz tytuł notatki!", Brushes.OrangeRed);
             TitleTextBox.Focus();
             return;
         }
 
-        if (_selectedNote != null)
+        if (_selectedNote != null && _selectedNote.Title == title)
         {
-            // Aktualizacja istniejącej notatki
-            _selectedNote.Title = title;
+            // Aktualizacja zaznaczonej notatki
             _selectedNote.Content = content;
             _selectedNote.CreatedAt = DateTime.Now;
 
-            // Sortowanie: najnowsza na górze
             _allNotes.Remove(_selectedNote);
             _allNotes.Insert(0, _selectedNote);
 
             if (SaveNotesToFile())
             {
-                SetStatus("✅ Zaktualizowano notatkę i zapisano do pliku notatki.md!", Brushes.ForestGreen);
+                SetStatus("Zaktualizowano notatkę!", Brushes.ForestGreen);
             }
         }
         else
         {
-            // Utworzenie nowej notatki
+            // Utworzenie nowej notatki z zachowaniem wszystkich wcześniejszych
             var newNote = new Note
             {
                 Id = Guid.NewGuid(),
@@ -241,69 +234,16 @@ public partial class MainWindow : Window
 
             if (SaveNotesToFile())
             {
-                SetStatus("✅ Notatka zapisana do pliku notatki.md!", Brushes.ForestGreen);
+                SetStatus("Zapisano notatkę!", Brushes.ForestGreen);
             }
-
-            EditorHeaderTextBlock.Text = "Edycja notatki";
-            DeleteButton.IsVisible = true;
-            ClearButton.Content = "Nowa notatka";
         }
 
-        ApplyFilter();
+        RefreshNotesList();
         NotesListBox.SelectedItem = _selectedNote;
     }
 
     /// <summary>
-    /// Obsługa przycisku nowej notatki / wyczyszczenia formularza.
-    /// </summary>
-    private void OnNewNoteClick(object? sender, RoutedEventArgs e)
-    {
-        ClearForm();
-        TitleTextBox.Focus();
-    }
-
-    private void OnClearClick(object? sender, RoutedEventArgs e)
-    {
-        ClearForm();
-    }
-
-    /// <summary>
-    /// Czyści formularz i przełącza w tryb tworzenia nowej notatki.
-    /// </summary>
-    private void ClearForm()
-    {
-        _selectedNote = null;
-        NotesListBox.SelectedItem = null;
-
-        TitleTextBox.Text = string.Empty;
-        ContentTextBox.Text = string.Empty;
-        EditorHeaderTextBlock.Text = "Nowa notatka";
-        DeleteButton.IsVisible = false;
-        ClearButton.Content = "Wyczyść formularz";
-        SetStatus("Formularz wyczyszczony. Gotowy na nową notatkę.", Brushes.Gray);
-    }
-
-    /// <summary>
-    /// Obsługa usuwania zaznaczonej notatki.
-    /// </summary>
-    private void OnDeleteClick(object? sender, RoutedEventArgs e)
-    {
-        if (_selectedNote == null) return;
-
-        var noteToRemove = _selectedNote;
-        _allNotes.Remove(noteToRemove);
-
-        if (SaveNotesToFile())
-        {
-            SetStatus($"🗑️ Usunięto notatkę \"{noteToRemove.Title}\".", Brushes.DodgerBlue);
-        }
-
-        ClearForm();
-        ApplyFilter();
-    }
-
-    /// <summary>
-    /// Obsługa zmiany wyboru notatki na liście.
+    /// Wybór notatki z listy wczytuje jej dane do pól edycji.
     /// </summary>
     private void OnNotesListSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -312,45 +252,19 @@ public partial class MainWindow : Window
             _selectedNote = note;
             TitleTextBox.Text = note.Title;
             ContentTextBox.Text = note.Content;
-
-            EditorHeaderTextBlock.Text = "Edycja notatki";
-            DeleteButton.IsVisible = true;
-            ClearButton.Content = "Nowa notatka";
-            SetStatus($"Wczytano notatkę: {note.Title}", Brushes.Gray);
+            SetStatus(string.Empty, Brushes.Transparent);
         }
     }
 
-    /// <summary>
-    /// Filtrowanie listy notatek po wpisaniu tekstu w wyszukiwarkę.
-    /// </summary>
-    private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
+    private void RefreshNotesList()
     {
-        ApplyFilter();
-    }
-
-    private void ApplyFilter()
-    {
-        var filter = SearchTextBox.Text?.Trim().ToLowerInvariant() ?? string.Empty;
-
-        var matchingNotes = string.IsNullOrEmpty(filter)
-            ? _allNotes
-            : _allNotes.Where(n =>
-                n.Title.ToLowerInvariant().Contains(filter) ||
-                n.Content.ToLowerInvariant().Contains(filter)).ToList();
-
         _displayedNotes.Clear();
-        foreach (var note in matchingNotes)
+        foreach (var note in _allNotes)
         {
             _displayedNotes.Add(note);
         }
-
-        NotesCountTextBlock.Text = _allNotes.Count.ToString();
-        EmptyNotesPlaceholder.IsVisible = _displayedNotes.Count == 0;
     }
 
-    /// <summary>
-    /// Ustawia komunikat o statusie.
-    /// </summary>
     private void SetStatus(string message, IBrush brush)
     {
         StatusTextBlock.Text = message;
