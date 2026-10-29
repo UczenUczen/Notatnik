@@ -481,6 +481,85 @@ public partial class MainWindow : Window
     }
 }
 
+## notatki.json
 
 
+[
+  {
+    "Id": "6c1564d2-49bd-4858-981d-0939845d8d70",
+    "Title": "Pierwsza notatka",
+    "Content": "Test",
+    "CreatedAt": "2026-10-29T08:24:03.8223425+01:00",
+    "ModifiedAt": null
+  },
+  {
+    "Id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "Title": "Witaj w Notatniku!",
+    "Content": "To jest przyk\u0142adowa zapisana notatka.\n\nAplikacja obs\u0142uguje:\n1. Pole na tytu\u0142\n2. Pole na tre\u015B\u0107\n3. Przycisk zapisu (oraz skr\u00F3t klawiszowy Ctrl\u002BS)\n4. List\u0119 zapisanych notatek z podgl\u0105dem i dat\u0105\n5. Wyszukiwanie notatek\n6. Edycj\u0119 i usuwanie\n\nWszystkie notatki s\u0105 trwale zapisywane w pliku notatki.json.",
+    "CreatedAt": "2026-10-29T08:15:00",
+    "ModifiedAt": null
+  }
+]
 
+## notatnik.csproj
+
+
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="notatki.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
+
+
+## note.cs
+
+
+using System;
+using System.Text.Json.Serialization;
+
+namespace notatnik;
+
+public class Note
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? ModifiedAt { get; set; }
+
+    [JsonIgnore]
+    public string FormattedDate => (ModifiedAt ?? CreatedAt).ToString("dd.MM.yyyy HH:mm");
+
+    [JsonIgnore]
+    public string PreviewSnippet
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Content))
+                return "(Brak treści)";
+
+            var singleLine = Content.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ').Trim();
+            return singleLine.Length > 60 ? singleLine[..57] + "..." : singleLine;
+        }
+    }
+}
