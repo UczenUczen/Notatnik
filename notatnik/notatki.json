@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "6c1564d2-49bd-4858-981d-0939845d8d70",
+    "Title": "Pierwsza notatka",
+    "Content": "Test",
+    "CreatedAt": "2026-10-29T08:24:03.8223425+01:00",
+    "ModifiedAt": null
+  },
+  {
+    "Id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "Title": "Witaj w Notatniku!",
+    "Content": "To jest przyk\u0142adowa zapisana notatka.\n\nAplikacja obs\u0142uguje:\n1. Pole na tytu\u0142\n2. Pole na tre\u015B\u0107\n3. Przycisk zapisu (oraz skr\u00F3t klawiszowy Ctrl\u002BS)\n4. List\u0119 zapisanych notatek z podgl\u0105dem i dat\u0105\n5. Wyszukiwanie notatek\n6. Edycj\u0119 i usuwanie\n\nWszystkie notatki s\u0105 trwale zapisywane w pliku notatki.json.",
+    "CreatedAt": "2026-10-29T08:15:00",
+    "ModifiedAt": null
+  }
+]
